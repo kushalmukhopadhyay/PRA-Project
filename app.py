@@ -10,7 +10,7 @@ st.title("🧠 Smart Health Monitoring System (ML Integrated)")
 # -----------------------------
 # Load real wearable dataset
 # -----------------------------
-historical_df = pd.read_csv("wearable_data.csv")  # Your real dataset
+historical_df = pd.read_csv("Dataset_Health.csv")  # Your real dataset
 
 # -----------------------------
 # Train IsolationForest
