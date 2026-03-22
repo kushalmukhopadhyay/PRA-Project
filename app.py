@@ -4,13 +4,26 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.ensemble import IsolationForest
 
+# Page setup
 st.set_page_config(page_title="Smart Health Monitoring System", layout="wide")
 st.title("🧠 Smart Health Monitoring System (ML Integrated)")
 
 # -----------------------------
-# Load real wearable dataset
+# Load and clean dataset
 # -----------------------------
-historical_df = pd.read_csv("Dataset_Health.csv")  # Your real dataset
+historical_df = pd.read_csv("Dataset_Health.csv")
+
+# Clean column names
+historical_df.columns = historical_df.columns.str.strip().str.lower()
+
+# Keep only numeric columns
+historical_df = historical_df.select_dtypes(include=[np.number])
+
+# Convert all to float
+historical_df = historical_df.astype(float)
+
+# Drop rows with missing values
+historical_df = historical_df.dropna()
 
 # -----------------------------
 # Train IsolationForest
@@ -31,6 +44,9 @@ stress_level = st.sidebar.slider("Stress Level (0-10)", 0, 10, 3)
 
 user_df = pd.DataFrame([[heart_rate, steps, sleep_hours, spo2, body_temp, stress_level]],
                        columns=["heart_rate","steps","sleep_hours","spo2","body_temp","stress_level"])
+
+# Align user input to training data
+user_df = user_df[historical_df.columns].astype(float)
 
 # -----------------------------
 # Predict anomaly
