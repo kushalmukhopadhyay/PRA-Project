@@ -1,102 +1,92 @@
-# app.py
 import streamlit as st
-import numpy as np
 import pandas as pd
-from sklearn.ensemble import IsolationForest
+import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.ensemble import IsolationForest
 
-st.set_page_config(page_title="Smart Health Monitoring", layout="wide")
-st.title("🧠 Smart Health Monitoring System")
+st.set_page_config(page_title="Smart Health Monitoring System", layout="wide")
+st.title("🧠 Smart Health Monitoring System (ML Integrated)")
 
-# ---------------------------
-# 1️⃣ Modular Inputs
-# ---------------------------
+# -----------------------------
+# Load real wearable dataset
+# -----------------------------
+historical_df = pd.read_csv("wearable_data.csv")  # Your real dataset
+
+# -----------------------------
+# Train IsolationForest
+# -----------------------------
+iso = IsolationForest(contamination=0.05, random_state=42)
+iso.fit(historical_df)
+
+# -----------------------------
+# User Inputs
+# -----------------------------
 st.sidebar.header("Enter Your Health Data")
-metrics = {
-    "Heart Rate (BPM)": st.sidebar.slider("Heart Rate", 50, 150, 80),
-    "Steps": st.sidebar.slider("Steps", 0, 20000, 8000),
-    "Sleep Hours": st.sidebar.slider("Sleep Hours", 0.0, 12.0, 7.0),
-    "SpO2 (%)": st.sidebar.slider("Blood Oxygen", 80, 100, 98),
-    "Body Temp (°C)": st.sidebar.slider("Body Temperature", 35.0, 40.0, 36.6),
-    "Stress Level (0-10)": st.sidebar.slider("Stress Level", 0, 10, 3)
+heart_rate = st.sidebar.slider("Heart Rate", 50, 150, 80)
+steps = st.sidebar.slider("Steps", 0, 20000, 8000)
+sleep_hours = st.sidebar.slider("Sleep Hours", 0.0, 12.0, 7.0)
+spo2 = st.sidebar.slider("SpO2 (%)", 80, 100, 98)
+body_temp = st.sidebar.slider("Body Temperature", 35.0, 40.0, 36.6)
+stress_level = st.sidebar.slider("Stress Level (0-10)", 0, 10, 3)
+
+user_df = pd.DataFrame([[heart_rate, steps, sleep_hours, spo2, body_temp, stress_level]],
+                       columns=["heart_rate","steps","sleep_hours","spo2","body_temp","stress_level"])
+
+# -----------------------------
+# Predict anomaly
+# -----------------------------
+anomaly = iso.predict(user_df)[0]
+
+# -----------------------------
+# Risk scoring
+# -----------------------------
+weights = {
+    "heart_rate": 0.2,
+    "steps": 0.15,
+    "sleep_hours": 0.2,
+    "spo2": 0.2,
+    "body_temp": 0.15,
+    "stress_level": 0.1
 }
 
-# Convert to DataFrame for analysis
-user_df = pd.DataFrame([metrics])
+risk_flags = {
+    "heart_rate": lambda x: x>100 or x<50,
+    "steps": lambda x: x<3000,
+    "sleep_hours": lambda x: x<5,
+    "spo2": lambda x: x<94,
+    "body_temp": lambda x: x>37.5,
+    "stress_level": lambda x: x>7
+}
 
-# ---------------------------
-# 2️⃣ Statistical Summary
-# ---------------------------
-st.subheader("📊 Statistical Summary")
-st.write(user_df.describe())
+metrics = user_df.iloc[0].to_dict()
+risk_score = sum(weights[m] for m,v in metrics.items() if risk_flags[m](v))
 
-# ---------------------------
-# 3️⃣ Anomaly Detection
-# ---------------------------
-iso = IsolationForest(contamination=0.05, random_state=42)
-# Fit on user data for demo; ideally fit on historical dataset
-iso.fit(user_df)
-anomaly = iso.predict(user_df)
-if anomaly[0] == -1:
+# -----------------------------
+# Display results
+# -----------------------------
+if anomaly == -1:
     st.warning("⚠️ One or more metrics are abnormal!")
 else:
-    st.success("✅ All metrics are within normal range")
+    st.success("✅ All metrics are normal")
 
-# ---------------------------
-# 4️⃣ Risk Scoring
-# ---------------------------
-weights = {
-    "Heart Rate (BPM)": 0.2,
-    "Steps": 0.15,
-    "Sleep Hours": 0.2,
-    "SpO2 (%)": 0.2,
-    "Body Temp (°C)": 0.15,
-    "Stress Level (0-10)": 0.1
-}
-
-# Define simple thresholds
-risk_flags = {
-    "Heart Rate (BPM)": lambda x: x>100 or x<50,
-    "Steps": lambda x: x<3000,
-    "Sleep Hours": lambda x: x<5,
-    "SpO2 (%)": lambda x: x<94,
-    "Body Temp (°C)": lambda x: x>37.5,
-    "Stress Level (0-10)": lambda x: x>7
-}
-
-risk_score = sum(weights[m] for m,v in metrics.items() if risk_flags[m](v))
 st.subheader("🩺 Health Risk Score")
-st.write(f"{risk_score*100:.1f}%")
-if risk_score > 0.3:
-    st.error("⚠️ High Risk Detected!")
-else:
-    st.success("✅ Low Risk")
+st.write(f"{risk_score*100:.2f}%")
 
-# ---------------------------
-# 5️⃣ Trend Visualization (Simulated)
-# ---------------------------
-st.subheader("📈 Trend Analysis")
-# Simulate historical data for demo
-history = pd.DataFrame({
-    "Heart Rate": np.random.normal(75, 10, 7),
-    "Steps": np.random.normal(8000, 2000, 7),
-    "Sleep Hours": np.random.normal(7, 1.5, 7),
-    "SpO2 (%)": np.random.normal(98, 1, 7),
-    "Body Temp (°C)": np.random.normal(36.6, 0.5, 7),
-    "Stress Level (0-10)": np.random.randint(1,5,7)
+# -----------------------------
+# Simulated 7-day trends
+# -----------------------------
+trend = pd.DataFrame({
+    "heart_rate": np.random.normal(heart_rate, 5, 7),
+    "steps": np.random.normal(steps, 1000, 7),
+    "sleep_hours": np.random.normal(sleep_hours, 1, 7),
+    "spo2": np.random.normal(spo2, 1, 7),
+    "body_temp": np.random.normal(body_temp, 0.3, 7),
+    "stress_level": np.random.normal(stress_level, 1, 7)
 })
 
+st.subheader("📈 Simulated 7-Day Trend")
 fig, ax = plt.subplots(figsize=(10,5))
-for col in history.columns:
-    ax.plot(history[col], marker='o', label=col)
-ax.set_xlabel("Days")
-ax.set_ylabel("Values")
-ax.set_title("Health Metrics Trend Over 7 Days")
+for col in trend.columns:
+    ax.plot(trend[col], marker='o', label=col)
 ax.legend()
 st.pyplot(fig)
-
-# ---------------------------
-# 6️⃣ Optional: Show Raw Data
-# ---------------------------
-st.subheader("🗂 Raw Data (Current + Simulated History)")
-st.write(pd.concat([user_df, history], ignore_index=True))
